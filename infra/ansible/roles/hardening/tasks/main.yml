@@ -1,0 +1,85 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  tags: [packages]
+
+- name: Install base + hardening packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+  tags: [packages]
+
+# --- SSH: keys only, no root login ---
+- name: Harden sshd (keys only, no root)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-capstone-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible (hardening role)
+      PasswordAuthentication no
+      PermitRootLogin no
+      KbdInteractiveAuthentication no
+      ChallengeResponseAuthentication no
+      X11Forwarding no
+  notify: Restart ssh
+  tags: [ssh]
+
+# --- fail2ban: ban brute-force SSH ---
+- name: Enable and start fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true
+  tags: [fail2ban]
+
+# --- unattended security upgrades ---
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  tags: [updates]
+
+# --- Optional host firewall (off by default; see defaults/main.yml) ---
+- name: Configure UFW (only when enable_ufw=true)
+  when: enable_ufw | bool
+  tags: [firewall]
+  block:
+    - name: UFW — allow pod/service/CNI traffic to be forwarded
+      ansible.builtin.lineinfile:
+        path: /etc/default/ufw
+        regexp: '^DEFAULT_FORWARD_POLICY='
+        line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
+
+    - name: UFW — allow SSH, HTTP, HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: ["22", "80", "443"]
+
+    - name: UFW — allow all intra-cluster traffic (VPC + pod + service CIDRs)
+      community.general.ufw:
+        rule: allow
+        src: "{{ item }}"
+      loop:
+        - "{{ cluster_vpc_cidr }}"
+        - "{{ k3s_pod_cidr }}"
+        - "{{ k3s_service_cidr }}"
+
+    - name: UFW — default deny incoming, allow outgoing, enable
+      community.general.ufw:
+        state: enabled
+        policy: "{{ item.policy }}"
+        direction: "{{ item.direction }}"
+      loop:
+        - { direction: incoming, policy: deny }
+        - { direction: outgoing, policy: allow }

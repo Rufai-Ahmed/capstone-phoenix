@@ -1,0 +1,6 @@
+---
+# Install with: ansible-galaxy collection install -r requirements.yml
+# community.general is only needed if you flip enable_ufw=true in the hardening role.
+collections:
+  - name: community.general
+    version: ">=8.0.0"

@@ -1,0 +1,19 @@
+---
+common_packages:
+  - curl
+  - vim
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+# Host firewall is OFF by default. The AWS security group is the enforcing
+# firewall (see infra/terraform/modules/security_group). UFW on a k3s node is
+# redundant AND a foot-gun: UFW's default FORWARD policy is DROP, which silently
+# breaks pod-to-pod / CNI traffic. If you enable it, the tasks below set
+# DEFAULT_FORWARD_POLICY=ACCEPT and allow the VPC + pod/service CIDRs so the
+# overlay keeps working. Documented in docs/ARCHITECTURE.md §2.
+enable_ufw: false
+
+# k3s internal ranges, allowed through UFW when it is enabled.
+k3s_pod_cidr: "10.42.0.0/16"
+k3s_service_cidr: "10.43.0.0/16"

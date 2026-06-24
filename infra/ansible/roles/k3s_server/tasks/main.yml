@@ -1,0 +1,63 @@
+---
+# Idempotency: only (re)run the installer when k3s is missing or the version
+# differs. A second play run with the same k3s_version reports changed=0.
+- name: Check installed k3s version
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install k3s server (control plane)
+  ansible.builtin.shell:
+    cmd: >
+      curl -sfL https://get.k3s.io |
+      INSTALL_K3S_VERSION="{{ k3s_version }}"
+      INSTALL_K3S_EXEC="server
+      --disable traefik
+      --disable servicelb
+      --write-kubeconfig-mode 644
+      --tls-san {{ server_public_ip }}"
+      sh -s -
+  args:
+    executable: /bin/bash
+  when: k3s_version not in k3s_installed.stdout
+  changed_when: true
+
+- name: Wait for the k3s API to be ready
+  ansible.builtin.command: k3s kubectl get --raw=/readyz
+  register: k3s_ready
+  retries: 30
+  delay: 5
+  until: k3s_ready.rc == 0
+  changed_when: false
+
+- name: Read the node-token (used by agents to join)
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_node_token
+
+- name: Publish the token as a host fact for the agent play
+  ansible.builtin.set_fact:
+    k3s_token: "{{ k3s_node_token.content | b64decode | trim }}"
+
+- name: Read kubeconfig from the server
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: k3s_kubeconfig
+
+# Rewrite the embedded 127.0.0.1 to the public EIP so kubectl works from your
+# laptop. The API cert already carries the public IP via --tls-san, so TLS
+# verification succeeds. Saved with 0600; gitignored by *kubeconfig*.
+- name: Write a local kubeconfig pointed at the public IP
+  ansible.builtin.copy:
+    dest: "{{ kubeconfig_local_path }}"
+    mode: "0600"
+    content: >-
+      {{ (k3s_kubeconfig.content | b64decode)
+         | regex_replace('https://127.0.0.1:6443', 'https://' + server_public_ip + ':6443') }}
+  delegate_to: localhost
+  become: false
+
+- name: Show how to use the kubeconfig
+  ansible.builtin.debug:
+    msg: "kubeconfig written to {{ kubeconfig_local_path }} — run: export KUBECONFIG={{ kubeconfig_local_path }} && kubectl get nodes -o wide"
