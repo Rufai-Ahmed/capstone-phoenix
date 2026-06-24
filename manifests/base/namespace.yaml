@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taskapp
+  labels:
+    app.kubernetes.io/part-of: taskapp
+    # Pod Security Admission. We ENFORCE baseline (the stock nginx frontend image
+    # binds :80 and isn't built rootless, so it can't meet "restricted"), but we
+    # AUDIT/WARN against restricted so regressions in the hardened workloads
+    # (backend, postgres, migrate) are surfaced.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"

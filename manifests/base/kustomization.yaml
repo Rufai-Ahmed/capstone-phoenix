@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taskapp
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres-service.yaml
+  - postgres-statefulset.yaml
+  - backend-service.yaml
+  - backend-deployment.yaml
+  - backend-hpa.yaml
+  - backend-pdb.yaml
+  - frontend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-pdb.yaml
+  - migration-job.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+  # The Secret is intentionally NOT here. Create it out-of-band, OR seal it and
+  # uncomment the next line (see manifests/base/secret.example.yaml):
+  # - taskapp.sealed.yaml
+
+# Org labels on metadata only — NOT on selectors (those stay the simple app: <x>).
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: taskapp
+      app.kubernetes.io/managed-by: argocd
+    includeSelectors: false

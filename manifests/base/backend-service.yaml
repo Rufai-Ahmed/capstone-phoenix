@@ -1,0 +1,17 @@
+# MUST be named "backend": the frontend nginx image proxies /api/ ->
+# http://backend:5000 (resolved at nginx startup). Renaming this breaks the app.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: backend
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

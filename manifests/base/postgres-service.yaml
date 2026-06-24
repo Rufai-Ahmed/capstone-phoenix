@@ -1,0 +1,18 @@
+# Headless Service gives the StatefulSet a stable network identity.
+# Backend connects to DATABASE_HOST=postgres -> resolves to postgres-0.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

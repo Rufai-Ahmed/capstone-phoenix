@@ -1,0 +1,27 @@
+# Single host -> frontend (its nginx proxies /api internally). cert-manager fills
+# taskapp-tls from the cluster-issuer annotation. Overlay patches the host.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskapp
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - taskapp.example.com
+      secretName: taskapp-tls
+  rules:
+    - host: taskapp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

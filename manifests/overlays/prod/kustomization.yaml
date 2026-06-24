@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# ---------------------------------------------------------------------------
+# CHANGE ME: replace taskapp.example.com with your real domain (3 spots below).
+# ---------------------------------------------------------------------------
+
+# The deployed image tags. This is the single place CI bumps on a release
+# (`kustomize edit set image ...`). Pinned 7-char GHCR SHAs — never :latest.
+images:
+  - name: ghcr.io/ts-a-devops/taskapp-backend
+    newTag: "5d6b8fc"
+  - name: ghcr.io/ts-a-devops/taskapp-frontend
+    newTag: "69432e1" # quoted: YAML would read it as a float (exponential) otherwise
+
+patches:
+  # Point the Ingress + its TLS cert at your domain.
+  - target:
+      kind: Ingress
+      name: taskapp
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: taskapp.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: taskapp.example.com
+  # Keep the API's CORS allowlist aligned with the domain.
+  - target:
+      kind: ConfigMap
+      name: taskapp-config
+    patch: |-
+      - op: replace
+        path: /data/CORS_ORIGINS
+        value: https://taskapp.example.com

@@ -1,0 +1,26 @@
+# Backend autoscales on CPU. metrics-server is bundled with k3s, so this works
+# out of the box. The taskapp Argo Application ignores /spec/replicas on the
+# backend Deployment so selfHeal doesn't fight the HPA.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120 # don't flap pods down too fast

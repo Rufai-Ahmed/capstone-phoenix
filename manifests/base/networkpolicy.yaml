@@ -1,0 +1,115 @@
+# Default-deny + segmented allows (k3s enforces NetworkPolicy via kube-router).
+# Allowed path: ingress-nginx -> frontend:80 -> backend:5000 -> postgres:5432 + DNS.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Everyone may resolve DNS (CoreDNS in kube-system). Without this, default-deny
+# egress breaks name resolution and nothing works.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Allow all egress WITHIN the namespace (frontend->backend, backend->postgres,
+# migrate->postgres). Nothing in this app needs to egress to the internet.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace-egress
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: {}
+---
+# Only the ingress controller may reach the frontend, on :80.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-allow-ingress
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP
+---
+# Only the frontend may reach the backend, on :5000.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-allow-frontend
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - port: 5000
+          protocol: TCP
+---
+# Only the backend and the migration job may reach Postgres, on :5432.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow-backend
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+        - podSelector:
+            matchLabels:
+              app: taskapp-migrate
+      ports:
+        - port: 5432
+          protocol: TCP

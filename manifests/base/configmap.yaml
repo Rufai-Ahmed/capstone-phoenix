@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskapp-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+data:
+  # Backend reads these INDIVIDUAL vars (see app/__init__.py), not a DATABASE_URL.
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "taskapp"
+  DATABASE_USER: "taskapp_user"
+  FLASK_ENV: "production"
+  # SPA calls same-origin /api so CORS isn't strictly triggered; lock it anyway.
+  # The prod overlay patches this to your real domain.
+  CORS_ORIGINS: "https://taskapp.example.com"
+  # Postgres init vars (the image reads POSTGRES_*). Mirror the app's db/user.
+  POSTGRES_DB: "taskapp"
+  POSTGRES_USER: "taskapp_user"
