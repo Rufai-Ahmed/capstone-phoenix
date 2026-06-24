@@ -1,0 +1,19 @@
+# MANAGED BY TERRAFORM — do not edit by hand. Regenerated on every `terraform apply`.
+# Connection vars (ansible_user, key, python) live in group_vars/all.yml.
+
+[server]
+server ansible_host=${server_public_ip}
+
+[agents]
+%{ for w in workers ~}
+${w.name} ansible_host=${w.public_ip}
+%{ endfor ~}
+
+[k3s_cluster:children]
+server
+agents
+
+# The private IP agents use to join the k3s API (kept off the public internet).
+[k3s_cluster:vars]
+server_private_ip=${server_private_ip}
+server_public_ip=${server_public_ip}
