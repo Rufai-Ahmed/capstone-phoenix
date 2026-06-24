@@ -1,0 +1,25 @@
+# App-of-apps. Apply this once (after Argo CD is installed); it owns every child
+# Application in gitops/apps/, which in turn own the platform + the TaskApp.
+# Set repoURL to YOUR fork first (scripts/set-repo-url.sh).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/REPLACE_ME/capstone-phoenix.git
+    targetRevision: main
+    path: gitops/apps
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

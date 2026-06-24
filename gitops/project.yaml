@@ -1,0 +1,21 @@
+# Optional hardening: a scoped AppProject. To adopt it, apply this file and flip
+# `project: default` -> `project: capstone` in root-app.yaml + gitops/apps/*.
+# Left unused by default so the GitOps layer works with zero extra steps.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: capstone
+  namespace: argocd
+spec:
+  description: Capstone Phoenix — TaskApp + platform
+  sourceRepos:
+    - "*" # tighten to your fork + the 3 helm repos once stable
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
