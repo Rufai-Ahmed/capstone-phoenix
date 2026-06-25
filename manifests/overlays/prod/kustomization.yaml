@@ -5,7 +5,7 @@ resources:
   - ../../base
 
 # ---------------------------------------------------------------------------
-# CHANGE ME: replace taskapp.example.com with your real domain (3 spots below).
+# CHANGE ME: replace taskapp.rufaiahmed.com with your real domain (3 spots below).
 # ---------------------------------------------------------------------------
 
 # The deployed image tags. This is the single place CI bumps on a release
@@ -24,10 +24,10 @@ patches:
     patch: |-
       - op: replace
         path: /spec/rules/0/host
-        value: taskapp.example.com
+        value: taskapp.rufaiahmed.com
       - op: replace
         path: /spec/tls/0/hosts/0
-        value: taskapp.example.com
+        value: taskapp.rufaiahmed.com
   # Keep the API's CORS allowlist aligned with the domain.
   - target:
       kind: ConfigMap
@@ -35,4 +35,4 @@ patches:
     patch: |-
       - op: replace
         path: /data/CORS_ORIGINS
-        value: https://taskapp.example.com
+        value: https://taskapp.rufaiahmed.com

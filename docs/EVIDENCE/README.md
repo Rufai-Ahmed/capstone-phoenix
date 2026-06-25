@@ -10,3 +10,4 @@ Drop screenshots/logs here, named so a grader knows what each proves:
 - `hpa-scale.png` — replicas climbing under load
 - `argocd-synced.png` — Argo CD Synced + Healthy
 - `failover.png` — app up after a node drain
+ 

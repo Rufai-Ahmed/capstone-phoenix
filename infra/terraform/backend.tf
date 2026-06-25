@@ -5,7 +5,7 @@
 # the bootstrap defaults, update them here to match `terraform output backend_config`.
 terraform {
   backend "s3" {
-    bucket         = "capstone-phoenix-tfstate"
+    bucket         = "capstone-phoenix-tfstate-577817260255"
     key            = "capstone-phoenix/terraform.tfstate"
     region         = "eu-north-1"
     dynamodb_table = "capstone-phoenix-tflock"
