@@ -11,7 +11,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/REPLACE_ME/capstone-phoenix.git
+    repoURL: https://github.com/Rufai-Ahmed/capstone-phoenix.git
     targetRevision: main
     path: platform
     directory:
