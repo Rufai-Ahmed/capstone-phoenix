@@ -60,4 +60,4 @@
 
 - name: Show how to use the kubeconfig
   ansible.builtin.debug:
-    msg: "kubeconfig written to {{ kubeconfig_local_path }} — run: export KUBECONFIG={{ kubeconfig_local_path }} && kubectl get nodes -o wide"
+    msg: "kubeconfig written to {{ kubeconfig_local_path }}. Run: export KUBECONFIG={{ kubeconfig_local_path }} && kubectl get nodes -o wide"

@@ -2,116 +2,114 @@
 
 ## 1. Topology
 
-3 EC2 nodes in one AWS VPC (`eu-north-1`), k3s. The control-plane node is left
-schedulable, so all 3 nodes run workloads. ingress-nginx runs as a DaemonSet
-binding host ports 80/443 on every node; DNS points at the control-plane's
-Elastic IP.
+3 EC2 nodes in one AWS VPC (eu-north-1) running k3s. The control-plane node is
+left schedulable so all 3 nodes run workloads. ingress-nginx runs as a DaemonSet
+on host ports 80/443, and DNS points at the control-plane's Elastic IP.
 
 ```
-                          Internet
-                             │  taskapp.<you>.com  (A -> server EIP)
-                             ▼
-                   :80/:443  ┌───────────────────────────────────────────┐
-                   (hostPort)│            ingress-nginx (DaemonSet)        │  TLS by cert-manager
-                             └───────────────────────────────────────────┘  (Let's Encrypt, HTTP-01)
-                                                │  Ingress: taskapp -> frontend:80
-                                                ▼
-                                      Service/frontend (ClusterIP)
-                              ┌──────────────────┴───────────────────┐
-                              ▼                                       ▼
-                       frontend pod (node A)                  frontend pod (node B)
-                       nginx: SPA + proxy /api/ ─────────────────────┐
-                                                                     ▼
-                                                          Service/backend :5000
-                                            ┌──────────────────┴──────────────────┐
-                                            ▼                                      ▼
-                                     backend pod (node B)                  backend pod (node C)   ◀── HPA 2..6
-                                     gunicorn :5000                                │
-                                            └──────────────┬───────────────────────┘
-                                                           ▼
-                                              Service/postgres (headless)
-                                                           ▼
-                                              postgres-0  (StatefulSet, node C)
-                                                           │
-                                              PVC (local-path) ── EBS gp3 on node C
+                Internet
+                   |   taskapp.<you>.com  (A record -> server EIP)
+                   v
+          +-------------------------------+
+   :80/443| ingress-nginx (DaemonSet)     |  TLS via cert-manager + Let's Encrypt
+          +-------------------------------+
+                   |  Ingress -> frontend:80
+                   v
+            Service/frontend (ClusterIP)
+              |                     |
+              v                     v
+        frontend pod          frontend pod     nginx serves the SPA, proxies /api -> backend
+              |                     |
+              +----------+----------+
+                         v
+                Service/backend:5000
+              |                     |
+              v                     v
+         backend pod           backend pod     gunicorn, autoscaled by the HPA (2..6)
+              |                     |
+              +----------+----------+
+                         v
+            Service/postgres (headless)
+                         v
+              postgres-0  (StatefulSet + PVC on local-path)
 
-  nodes: A = capstone-phoenix-server (k3s server)   B,C = capstone-phoenix-worker-{1,2} (k3s agents)
-  platform (Argo-managed): argocd, ingress-nginx, cert-manager, sealed-secrets, metrics-server (k3s built-in)
+nodes: server (k3s server) + worker-1, worker-2 (k3s agents)
+platform (managed by Argo CD): argocd, ingress-nginx, cert-manager, sealed-secrets
+(metrics-server is built into k3s)
 ```
 
-## 2. Node & network
+## 2. Node and network
 
-- **Nodes:** 1× `t3.medium` control-plane (runs the API + Argo CD), 2× `t3.small`
-  workers. Ubuntu 22.04. Spread across 2 AZs (`eu-north-1a/b`).
-- **Network:** one VPC `10.20.0.0/16`, two public subnets (`10.20.1.0/24`,
-  `10.20.2.0/24`). Nodes have public IPs and egress via the Internet Gateway —
-  **no NAT gateway** (it would add ~$32/mo for no benefit here; see COST).
-- **Firewall (the AWS security group is the enforcing firewall):**
-  - `22` — operator IP only.
-  - `80`, `443` — world (ingress).
-  - everything else (k3s API `6443`, flannel VXLAN `8472/udp`, kubelet `10250`,
-    NodePorts) — **intra-VPC only**. `6443` is never exposed to the internet.
-- Host UFW is shipped but **off by default**: the SG already enforces least
-  privilege, and UFW's default `FORWARD` DROP silently breaks CNI traffic. If
-  enabled, the role sets `DEFAULT_FORWARD_POLICY=ACCEPT` and allows the VPC/pod/
-  service CIDRs.
+- Nodes: 1x t3.medium control-plane (runs the API server and Argo CD) and 2x
+  t3.small workers. Ubuntu 22.04, spread across 2 AZs (eu-north-1a/b).
+- Network: one VPC 10.20.0.0/16 with two public subnets (10.20.1.0/24 and
+  10.20.2.0/24). Nodes have public IPs and reach the internet through the
+  Internet Gateway. I did not add a NAT gateway because it costs ~$32/mo and
+  buys nothing here.
+- Firewall (the AWS security group does the enforcing):
+  - 22: my IP only.
+  - 80, 443: open to the world for ingress.
+  - everything else (k3s API 6443, flannel VXLAN 8472/udp, kubelet 10250,
+    NodePorts): intra-VPC only. 6443 is never exposed to the internet.
+- A host UFW role is included but off by default. The security group already
+  enforces least privilege, and UFW's default FORWARD policy is DROP, which
+  quietly breaks pod networking. When enabled it sets DEFAULT_FORWARD_POLICY to
+  ACCEPT and allows the VPC, pod and service CIDRs.
 
 ## 3. Request flow
 
-DNS resolves `taskapp.<you>.com` to the server's EIP. The packet hits
-ingress-nginx on that node's host port `443`; cert-manager has provisioned a
-Let's Encrypt cert (HTTP-01) into the `taskapp-tls` Secret, so TLS terminates
-there. The Ingress routes the host to `Service/frontend:80`. nginx in the
-frontend pod serves the React SPA and reverse-proxies `/api/` to
-`http://backend:5000` (resolved via cluster DNS to `Service/backend`). gunicorn
-handles the request and talks to Postgres at `postgres:5432` (the headless
-Service -> `postgres-0`). Responses return back up the same path.
+DNS resolves taskapp.<you>.com to the server's EIP. The request hits
+ingress-nginx on that node's host port 443, where cert-manager has already put a
+Let's Encrypt cert (HTTP-01) into the taskapp-tls Secret, so TLS terminates
+there. The Ingress sends the host to Service/frontend:80. nginx in the frontend
+pod serves the React SPA and reverse-proxies /api/ to http://backend:5000 (the
+backend Service, resolved by cluster DNS). gunicorn handles the request and talks
+to Postgres at postgres:5432 through the headless Service. Responses go back up
+the same path.
 
-## 4. Single-server assumptions fixed
+## 4. Single-server assumptions I had to fix
 
-| Single-server assumption | Why it breaks at scale | How it's fixed here |
+| Assumption that was fine on one box | Why it breaks on a cluster | Fix |
 |---|---|---|
-| migrate-on-boot in the entrypoint | 2+ replicas race on `alembic upgrade head` | Deployment overrides `command:` to start gunicorn directly (skips the migrating entrypoint); migrations run once as a **Job** (sync-wave 2, after DB, before backend; `Replace=true` re-runs on image bump). |
-| named volume on the host | a rescheduled pod loses its data on another box | Postgres is a **StatefulSet** with a **PVC** (`local-path`). The PV carries node affinity so `postgres-0` always reattaches to its data. (Survives pod kills; node loss is the documented limit — see §5.) |
-| `ports:` published on the host | many pods on many nodes need one front door | **ingress-nginx** DaemonSet + a single **Ingress**; Services give stable virtual IPs in front of pod sets. |
-| "the container is up = it's ready" | traffic hits a pod before its DB is reachable | **startup/readiness/liveness probes**; readiness gates Service endpoints. Backend readiness uses DB-aware `/api/health`; liveness is a cheap TCP check to avoid restart storms. |
-| restart the box to recover | one box = a single point of failure | k8s self-healing: failed pods reschedule; **2+ replicas** with topology spread; **PDBs** keep ≥1 up during drains. |
-| `docker compose up -d` redeploy = brief downtime | users see 502s during a deploy | rolling update with **`maxUnavailable: 0`** + `maxSurge: 1`, readiness gating, and a `preStop` drain delay -> zero dropped requests. |
-| secrets in a `.env` on the box | not in source control, or worse, committed plaintext | secrets are **not** in the manifests: created out-of-band for first run, then **Sealed Secrets** so only the *encrypted* form lives in git. |
-| one box handles all load | can't absorb spikes | **HPA** scales the backend 2->6 on CPU (k3s ships metrics-server). |
-| flat network, everything talks to everything | a compromised pod can reach the DB | **NetworkPolicy** default-deny + segmented (ingress->frontend->backend->postgres only). |
+| migrate-on-boot in the entrypoint | 2+ replicas race on `alembic upgrade head` | Deployment overrides `command:` to run gunicorn directly (skipping the migrating entrypoint); migrations run once as a Job (sync-wave 2, after the DB, before the backend; Replace=true re-runs it on an image bump) |
+| named volume on the host | a rescheduled pod loses its data on another box | Postgres is a StatefulSet with a PVC on local-path; the PV's node affinity makes postgres-0 reattach to its data (pod kills are safe, node loss is the documented limit, see section 5) |
+| ports published on the host | many pods on many nodes need one front door | ingress-nginx DaemonSet plus one Ingress; Services give stable virtual IPs in front of the pods |
+| container up = ready | traffic hits a pod before its DB is reachable | startup/readiness/liveness probes; readiness gates the Service endpoints. Backend readiness uses the DB-aware /api/health, liveness is a cheap TCP check so a DB blip does not restart the pod |
+| restart the box to recover | one box is a single point of failure | self-healing: failed pods reschedule, 2+ replicas with topology spread, PDBs keep at least one pod up during drains |
+| compose redeploy has a short outage | users see 502s during a deploy | rolling update with maxUnavailable 0 and maxSurge 1, readiness gating, and a preStop drain so no requests are dropped |
+| secrets in a .env on the box | not in version control, or committed in plaintext | secrets are not in the manifests: created out-of-band on first run, then sealed so only the encrypted form goes in git |
+| one box handles all load | cannot absorb spikes | HPA scales the backend 2 to 6 on CPU (k3s ships metrics-server) |
+| flat network, everything talks to everything | a compromised pod can reach the DB | NetworkPolicy default-deny plus segmented rules (ingress to frontend to backend to postgres only) |
 
-## 5. Choices & trade-offs
+## 5. Choices and trade-offs
 
-- **kustomize (raw YAML base + prod overlay)**, not Helm. The objects are
-  readable as-is; the overlay is the single place to pin image tags
+- kustomize (plain YAML base + prod overlay) instead of Helm. The objects stay
+  readable, and the overlay is the one place I pin image tags
   (`kustomize edit set image`) and set the domain. Argo renders kustomize
-  natively. Helm would add templating indirection we don't need for one app.
-- **ingress-nginx over k3s's bundled Traefik.** It's the most widely documented
-  controller and pairs cleanly with cert-manager. We `--disable traefik` and run
-  ingress-nginx as a **DaemonSet with hostPort** (no cloud LB): DNS can point at
-  any node, and draining a worker never removes the ingress path. The trade-off
-  is a single DNS A record (the server EIP) = one edge node; the HA upgrade is an
-  AWS NLB across all nodes (added cost, noted in COST).
-- **CNI / NetworkPolicy:** k3s's default flannel plus its embedded kube-router
-  **enforces** NetworkPolicy, so the default-deny policies are real, not cosmetic.
-- **Storage: k3s `local-path`.** Zero setup and fine for a single Postgres: the
-  PV is node-local, so pod kills reattach and data persists. The honest limit:
-  if the *node* hosting `postgres-0` dies, the data is stranded. Surviving node
-  loss needs replicated/network storage — **Longhorn** (k3s-native, replicates
-  across nodes) or the **AWS EBS CSI driver** (re-attach within an AZ). Left as a
-  documented upgrade to keep the cluster setup dependency-free.
-- **Secrets: Sealed Secrets (primary) + out-of-band (bootstrap).** Committing a
-  plaintext Secret to "let git own everything" defeats the point. The
-  sealed-secrets controller lets the *encrypted* SealedSecret live in git and be
-  reconciled by Argo. First run can also just `kubectl create secret` and let
-  Argo ignore it. Either way no plaintext secret is ever committed.
-- **Single control-plane (not HA).** Per the brief, cluster difficulty lives in
-  Kubernetes, not the control plane. One k3s server is the right cost/complexity
-  point; etcd-HA (3 servers) is a known, separate upgrade.
-- **Frontend securityContext is lighter than the backend's.** The given nginx
-  image binds `:80` as root and writes its pid/cache, so it can't be
-  `runAsNonRoot` / `readOnlyRootFilesystem` without rebuilding it (the brief says
-  don't). We still drop all caps except those nginx needs, block privilege
-  escalation, and apply the default seccomp profile. Backend, Postgres, and the
-  migration Job run fully non-root + seccomp + caps-dropped.
+  natively, so Helm would just add templating I don't need for one app.
+- ingress-nginx instead of k3s's bundled Traefik. It is the most documented
+  controller and works cleanly with cert-manager. I run it as a DaemonSet with
+  hostPort (no cloud load balancer), so DNS can point at any node and draining a
+  worker never removes the ingress path. The trade-off is that one DNS A record
+  points at one node; the HA version of this is an AWS NLB across all nodes.
+- NetworkPolicy: k3s uses flannel plus an embedded kube-router that actually
+  enforces NetworkPolicy, so the default-deny rules do real work.
+- Storage: k3s local-path. It needs no setup and is fine for a single Postgres.
+  The PV is node-local, so pod kills reattach and data survives. The limit is
+  that if the node holding postgres-0 dies, the data is stranded. Surviving node
+  loss would need Longhorn or the AWS EBS CSI driver; I left that as an upgrade
+  to keep the cluster dependency-free.
+- Secrets: sealed-secrets as the main path, with out-of-band creation for the
+  first run. Committing a plaintext Secret would defeat the purpose, so the
+  sealed-secrets controller lets the encrypted SealedSecret live in git and be
+  reconciled by Argo. No plaintext secret is ever committed.
+- Single control-plane, not HA. The brief says the difficulty is in Kubernetes,
+  not the control plane, so one k3s server is enough. etcd HA (3 servers) is a
+  separate upgrade.
+- The frontend securityContext is lighter than the backend's. The given nginx
+  image binds port 80 as root and writes its own pid/cache, so it cannot be
+  runAsNonRoot or readOnlyRootFilesystem without rebuilding the image (the brief
+  says not to). It still drops all caps except the ones nginx needs, blocks
+  privilege escalation, and uses the default seccomp profile. The backend,
+  Postgres and the migration Job all run fully non-root with seccomp and caps
+  dropped.

@@ -12,7 +12,7 @@ resource "aws_internet_gateway" "this" {
 }
 
 # Public subnets across 2 AZs. Nodes get public IPs and reach the internet via the
-# IGW directly — no NAT gateway, which keeps the bill down (see docs/COST.md).
+# IGW directly, no NAT gateway, which keeps the bill down (see docs/COST.md).
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.this.id

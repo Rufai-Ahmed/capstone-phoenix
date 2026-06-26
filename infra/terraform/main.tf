@@ -30,8 +30,7 @@ module "compute" {
   ssh_public_key_path  = var.ssh_public_key_path
 }
 
-# Render the Ansible inventory from the live node IPs. Gitignored — it holds the
-# current public IPs and is regenerated on every apply.
+# Render the Ansible inventory from node IPs (gitignored, regenerated each apply).
 resource "local_file" "ansible_inventory" {
   filename        = "${path.module}/../ansible/inventory/hosts.ini"
   file_permission = "0644"

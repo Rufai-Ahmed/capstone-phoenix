@@ -1,43 +1,44 @@
 # Cost
 
-Approximate **on-demand list prices, `eu-north-1` (Stockholm)**. Round numbers;
-your bill varies with usage and any free-tier credits.
+Approximate on-demand list prices in eu-north-1 (Stockholm). Rounded; the real
+bill depends on usage and any free-tier credits.
 
-## Monthly itemized cost
+## Monthly cost
 
 | Item | Spec | Qty | $/mo |
 |---|---|---:|---:|
-| control-plane VM | `t3.medium` (2 vCPU / 4 GiB) | 1 | ~33 |
-| worker VMs | `t3.small` (2 vCPU / 2 GiB) | 2 | ~33 |
-| block storage (root) | 20 GiB gp3 @ ~$0.08/GiB | 3 | ~5 |
+| control-plane VM | t3.medium (2 vCPU / 4 GiB) | 1 | ~33 |
+| worker VMs | t3.small (2 vCPU / 2 GiB) | 2 | ~33 |
+| block storage (root) | 20 GiB gp3 at ~$0.08/GiB | 3 | ~5 |
 | Elastic IP | attached to a running instance | 1 | 0 |
-| load balancer | none (ingress via hostPort) | 0 | 0 |
-| object storage + lock | S3 state + DynamoDB (on-demand) | 1 | <1 |
-| data transfer out | light demo traffic | — | ~1–3 |
+| load balancer | none (ingress on hostPort) | 0 | 0 |
+| state storage | S3 + DynamoDB (on-demand) | 1 | <1 |
+| data transfer out | light demo traffic | - | ~1-3 |
 | DNS / domain | ~$12/yr amortized | 1 | ~1 |
-| **Total** | | | **≈ $73/mo** |
+| **Total** | | | **~$73/mo** |
+
+That figure is the 24/7 monthly rate. In practice EC2 and EBS bill by the hour
+(about $0.12/hr for all three nodes), and the cluster only runs while building
+and demoing, so a few days of work costs a few dollars before `make destroy`.
 
 ## Compared to the single-server Compose + Portainer deploy
 
-- That stack: one small VM (~`t3.small`) + a volume + a domain ≈ **$18/mo**.
-- This cluster: ≈ **$73/mo** — roughly **4×**.
-- **What the extra ~$55 buys:** real multi-node scheduling, self-healing across
-  nodes, zero-downtime rolling deploys, autoscaling under load, and GitOps
-  reconciliation. **When it's NOT worth it:** a low-traffic internal tool with a
-  tolerable maintenance window — the single box is cheaper and simpler, and the
-  HA/autoscale machinery is overhead you pay for and don't use. The capstone's
-  point is to *be able to* justify the jump, not to claim it's always right.
+The old single-VM stack was about $18/mo. The cluster is about $73/mo, roughly
+4x. The extra spend buys multi-node scheduling, self-healing across nodes,
+zero-downtime deploys, autoscaling, and GitOps reconciliation. For a low-traffic
+internal tool with a tolerable maintenance window the single box is cheaper and
+simpler and that machinery is wasted; the cluster is worth it once you actually
+need the availability and scale.
 
-## How I'd halve this
+## How I'd halve it
 
-Spot/preemptible workers are the biggest lever: `t3.small` spot in `eu-north-1`
-runs ~60–70% cheaper, dropping the two workers from ~$33 to ~$11. Combined with
-shrinking the control-plane to `t3.small` (Argo CD fits in 2 GiB if you trim its
-component replicas) for another ~$16 saved, the total lands near **$35/mo** —
-about half — while keeping all three nodes. Going further (a 2-node cluster, or
-k3s on the cheapest burstable instances) trades away the headroom that makes the
-node-failover demo clean, so I'd stop at spot workers + a smaller server.
+The biggest lever is spot workers: t3.small spot in eu-north-1 runs about 60-70%
+cheaper, dropping the two workers from ~$33 to ~$11. Shrinking the control-plane
+to t3.small (Argo CD fits in 2 GiB if you trim its replicas) saves another ~$16,
+landing near $35/mo while keeping all three nodes. Going further (two nodes, or
+the cheapest burstable instances) gives up the headroom that keeps the
+node-failover demo clean, so I'd stop at spot workers plus a smaller server.
 
-> Footnote: a different provider changes the maths entirely — equivalent 3× small
-> VMs on Hetzner are roughly €15/mo total. AWS is used here to match the team's
-> existing infra and the S3/DynamoDB remote-state requirement.
+A different provider changes the maths: three small VMs on Hetzner are roughly
+EUR 15/mo. I used AWS to match the existing infra and the S3/DynamoDB
+remote-state requirement.

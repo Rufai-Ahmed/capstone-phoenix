@@ -22,7 +22,7 @@ resources:
   # uncomment the next line (see manifests/base/secret.example.yaml):
   # - taskapp.sealed.yaml
 
-# Org labels on metadata only — NOT on selectors (those stay the simple app: <x>).
+# Org labels on metadata only, not on selectors.
 labels:
   - pairs:
       app.kubernetes.io/part-of: taskapp

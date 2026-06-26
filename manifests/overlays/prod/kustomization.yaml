@@ -4,17 +4,13 @@ kind: Kustomization
 resources:
   - ../../base
 
-# ---------------------------------------------------------------------------
-# CHANGE ME: replace taskapp.rufaiahmed.com with your real domain (3 spots below).
-# ---------------------------------------------------------------------------
-
-# The deployed image tags. This is the single place CI bumps on a release
-# (`kustomize edit set image ...`). Pinned 7-char GHCR SHAs — never :latest.
+# Deployed image tags (pinned GHCR SHAs, never :latest). Bump on release with
+# `kustomize edit set image`.
 images:
   - name: ghcr.io/ts-a-devops/taskapp-backend
     newTag: "5d6b8fc"
   - name: ghcr.io/ts-a-devops/taskapp-frontend
-    newTag: "69432e1" # quoted: YAML would read it as a float (exponential) otherwise
+    newTag: "69432e1" # quoted so YAML doesn't read it as a number
 
 patches:
   # Point the Ingress + its TLS cert at your domain.

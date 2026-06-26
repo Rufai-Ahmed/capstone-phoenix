@@ -1,4 +1,4 @@
-# Latest Ubuntu 22.04 LTS (Canonical) — same distro family as the team's infra.
+# Latest Ubuntu 22.04 LTS (Canonical).
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical

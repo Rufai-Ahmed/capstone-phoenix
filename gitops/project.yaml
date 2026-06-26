@@ -7,7 +7,7 @@ metadata:
   name: capstone
   namespace: argocd
 spec:
-  description: Capstone Phoenix — TaskApp + platform
+  description: Capstone Phoenix TaskApp and platform
   sourceRepos:
     - "*" # tighten to your fork + the 3 helm repos once stable
   destinations:

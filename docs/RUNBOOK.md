@@ -1,6 +1,6 @@
 # Runbook
 
-Clone -> live HTTPS multi-node GitOps TaskApp. Every command is exact.
+From a fresh clone to a live HTTPS multi-node GitOps cluster.
 
 ## 0. Prerequisites (your machine)
 
@@ -44,8 +44,8 @@ taskapp.<you>.com.   A   <server-eip>
 
 Then set the domain in 3 spots (overlay) and the ACME email (issuer):
 
-- `manifests/overlays/prod/kustomization.yaml` — replace `taskapp.example.com` (×3)
-- `platform/cluster-issuer.yaml` — replace `you@example.com` (×2)
+- `manifests/overlays/prod/kustomization.yaml`: replace `taskapp.example.com` (3 places)
+- `platform/cluster-issuer.yaml`: replace `you@example.com` (2 places)
 
 ```bash
 git commit -am "set domain + acme email" && git push
@@ -53,7 +53,7 @@ git commit -am "set domain + acme email" && git push
 
 ## 3. The Secret (pick one, before the app syncs)
 
-**A — out-of-band (simplest):**
+**A. Out-of-band (simplest):**
 ```bash
 kubectl create namespace taskapp --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n taskapp create secret generic taskapp-secret \
@@ -61,7 +61,7 @@ kubectl -n taskapp create secret generic taskapp-secret \
   --from-literal=SECRET_KEY="$(python3 -c 'import secrets;print(secrets.token_hex(32))')"
 ```
 
-**B — Sealed Secrets (git owns it):** do this *after* step 4 installs the
+**B. Sealed Secrets (git owns it):** do this after step 4 installs the
 controller, then:
 ```bash
 ./scripts/seal-secret.sh                 # writes manifests/base/taskapp.sealed.yaml
@@ -95,7 +95,7 @@ curl -sI https://taskapp.<you>.com | head -1 # HTTP/2 200
 ./scripts/collect-evidence.sh                # snapshots -> docs/EVIDENCE
 ```
 
-> First cert issuance can take 1–2 min. If it stalls, use `letsencrypt-staging`
+> First cert issuance can take 1-2 min. If it stalls, use `letsencrypt-staging`
 > (swap the annotation on the Ingress) to dodge prod rate limits while debugging.
 
 ---
@@ -103,15 +103,15 @@ curl -sI https://taskapp.<you>.com | head -1 # HTTP/2 200
 ## Day-2 operations
 
 - **Scale a tier (frontend):** edit `replicas` in
-  `manifests/base/frontend-deployment.yaml`, commit, push. Argo applies it — no
-  `kubectl apply`. (Backend scales itself via the HPA.)
+  `manifests/base/frontend-deployment.yaml`, commit, push. Argo applies it, no
+  `kubectl apply` needed. (The backend scales itself via the HPA.)
 - **Roll back a bad deploy:** `git revert` the image bump in
   `manifests/overlays/prod/kustomization.yaml` and push; or in the Argo UI,
   History -> Rollback to a previous Synced revision.
 - **Ship a new image:** `cd manifests/overlays/prod && kustomize edit set image
   ghcr.io/ts-a-devops/taskapp-backend=ghcr.io/ts-a-devops/taskapp-backend:<sha>`,
   commit, push. The migration Job re-runs (Replace=true), then backend rolls.
-- **Run a new migration safely:** it rides the image bump above — the Job applies
+- **Run a new migration safely:** it rides the image bump above. The Job applies
   `alembic upgrade head` before the new backend pods start.
 - **Rotate a secret:** re-run `./scripts/seal-secret.sh` with new values, push
   (or recreate the out-of-band Secret), then
@@ -123,10 +123,12 @@ curl -sI https://taskapp.<you>.com | head -1 # HTTP/2 200
   ```bash
   kubectl drain capstone-phoenix-worker-1 --ignore-daemonsets --delete-emptydir-data
   ```
-  Its frontend/backend pods reschedule onto the other nodes; PDBs keep ≥1 up;
-  the site stays 200 (prove it with `./scripts/zero-downtime-check.sh`).
-  Recover: `kubectl uncordon capstone-phoenix-worker-1`. (Keep `postgres-0`'s
-  node out of the drain — its `local-path` data lives there; see ARCHITECTURE §5.)
+  Its frontend/backend pods reschedule onto the other nodes, the PDBs keep at
+  least one up, and the site stays at 200 (check with
+  `./scripts/zero-downtime-check.sh`).
+  Recover with `kubectl uncordon capstone-phoenix-worker-1`. Keep postgres-0's
+  node out of the drain, since its local-path data lives there (ARCHITECTURE
+  section 5).
 - **Backend pod crashloops:** `kubectl -n taskapp logs <pod> --previous`,
   `kubectl -n taskapp describe pod <pod>`, `kubectl -n taskapp get events
   --sort-by=.lastTimestamp`. Usual cause: wrong/missing `taskapp-secret`.

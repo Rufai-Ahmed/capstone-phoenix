@@ -12,7 +12,7 @@ if command -v hey >/dev/null; then
 elif command -v ab >/dev/null; then
   ab -t "$DUR" -c "$CONC" "$TARGET"
 else
-  echo "Install 'hey' (brew install hey) or 'ab'. Fallback — in-cluster load:"
+  echo "Install 'hey' (brew install hey) or 'ab'. Fallback, in-cluster load:"
   echo "  kubectl -n taskapp run loadgen --image=busybox --restart=Never -- \\"
   echo "    /bin/sh -c 'while true; do wget -q -O- http://backend:5000/api/health >/dev/null; done'"
   exit 1

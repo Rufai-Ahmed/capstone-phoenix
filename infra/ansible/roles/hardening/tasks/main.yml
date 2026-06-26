@@ -53,20 +53,20 @@
   when: enable_ufw | bool
   tags: [firewall]
   block:
-    - name: UFW — allow pod/service/CNI traffic to be forwarded
+    - name: UFW allow pod/service/CNI traffic to be forwarded
       ansible.builtin.lineinfile:
         path: /etc/default/ufw
         regexp: '^DEFAULT_FORWARD_POLICY='
         line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
 
-    - name: UFW — allow SSH, HTTP, HTTPS
+    - name: UFW allow SSH, HTTP, HTTPS
       community.general.ufw:
         rule: allow
         port: "{{ item }}"
         proto: tcp
       loop: ["22", "80", "443"]
 
-    - name: UFW — allow all intra-cluster traffic (VPC + pod + service CIDRs)
+    - name: UFW allow all intra-cluster traffic (VPC + pod + service CIDRs)
       community.general.ufw:
         rule: allow
         src: "{{ item }}"
@@ -75,7 +75,7 @@
         - "{{ k3s_pod_cidr }}"
         - "{{ k3s_service_cidr }}"
 
-    - name: UFW — default deny incoming, allow outgoing, enable
+    - name: UFW default deny incoming, allow outgoing, enable
       community.general.ufw:
         state: enabled
         policy: "{{ item.policy }}"

@@ -22,8 +22,7 @@ infra/ansible/inventory/hosts.ini
 !.env.example
 *secret*.yaml
 !*secret*.example.yaml
-# SealedSecrets are ENCRYPTED and safe to commit — they are the whole point of
-# letting git own the secret. Allow the *.sealed.yaml convention back in.
+# sealed secrets are encrypted, so they are safe to commit
 !*.sealed.yaml
 *.pem
 *.key

@@ -33,8 +33,8 @@ spec:
       containers:
         - name: backend
           image: ghcr.io/ts-a-devops/taskapp-backend:5d6b8fc
-          # Bypass the image entrypoint (it runs `alembic upgrade head` — replicas
-          # would race). Migrations run once as a Job; start gunicorn directly.
+          # Bypass the image entrypoint (it runs migrations; replicas would race).
+          # Migrations run once as a Job instead.
           command:
             ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5000", "--access-logfile", "-", "run:app"]
           ports:
