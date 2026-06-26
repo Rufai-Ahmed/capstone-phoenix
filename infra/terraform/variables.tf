@@ -48,15 +48,15 @@ variable "ssh_public_key_path" {
 
 # --- Compute ---
 variable "server_instance_type" {
-  description = "k3s control-plane node size. Runs the API server + Argo CD; give it a little headroom."
+  description = "k3s control-plane node size. Runs the API server and Argo CD, so give it 4 GiB."
   type        = string
-  default     = "t3.medium"
+  default     = "t2.medium"
 }
 
 variable "worker_instance_type" {
-  description = "k3s agent node size."
+  description = "k3s agent node size (1 vCPU keeps the total quota small)."
   type        = string
-  default     = "t3.small"
+  default     = "t2.small"
 }
 
 variable "worker_count" {

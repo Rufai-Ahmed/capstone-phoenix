@@ -7,8 +7,8 @@ bill depends on usage and any free-tier credits.
 
 | Item | Spec | Qty | $/mo |
 |---|---|---:|---:|
-| control-plane VM | t3.medium (2 vCPU / 4 GiB) | 1 | ~33 |
-| worker VMs | t3.small (2 vCPU / 2 GiB) | 2 | ~33 |
+| control-plane VM | t2.medium (2 vCPU / 4 GiB) | 1 | ~33 |
+| worker VMs | t2.small (1 vCPU / 2 GiB) | 2 | ~34 |
 | block storage (root) | 20 GiB gp3 at ~$0.08/GiB | 3 | ~5 |
 | Elastic IP | attached to a running instance | 1 | 0 |
 | load balancer | none (ingress on hostPort) | 0 | 0 |
@@ -32,9 +32,9 @@ need the availability and scale.
 
 ## How I'd halve it
 
-The biggest lever is spot workers: t3.small spot in eu-north-1 runs about 60-70%
-cheaper, dropping the two workers from ~$33 to ~$11. Shrinking the control-plane
-to t3.small (Argo CD fits in 2 GiB if you trim its replicas) saves another ~$16,
+The biggest lever is spot workers: t2.small spot in eu-north-1 runs about 60-70%
+cheaper, dropping the two workers from ~$34 to ~$11. Shrinking the control-plane
+to t2.small (Argo CD fits in 2 GiB if you trim its replicas) saves another ~$16,
 landing near $35/mo while keeping all three nodes. Going further (two nodes, or
 the cheapest burstable instances) gives up the headroom that keeps the
 node-failover demo clean, so I'd stop at spot workers plus a smaller server.
