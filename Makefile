@@ -37,7 +37,7 @@ build: ## render the prod manifests locally (no cluster needed)
 evidence: ## snapshot cluster state into docs/EVIDENCE
 	./scripts/collect-evidence.sh
 
-load-test: ## drive load to trigger the HPA: make load-test URL=https://taskapp.you.com
+load-test: ## drive load to trigger the HPA: make load-test URL=https://taskapp.<you>.com
 	./scripts/load-test.sh $(URL)
 
 destroy: ## tear the nodes down

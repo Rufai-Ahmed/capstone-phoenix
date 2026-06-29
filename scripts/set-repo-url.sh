@@ -3,9 +3,8 @@
 #   ./scripts/set-repo-url.sh https://github.com/<you>/capstone-phoenix.git
 set -euo pipefail
 REPO="${1:?usage: set-repo-url.sh https://github.com/<you>/capstone-phoenix.git}"
-PLACEHOLDER="https://github.com/REPLACE_ME/capstone-phoenix.git"
-grep -rl "$PLACEHOLDER" gitops | while read -r f; do
-  sed -i.bak "s#${PLACEHOLDER}#${REPO}#g" "$f" && rm -f "$f.bak"
+for f in gitops/root-app.yaml gitops/apps/taskapp.yaml gitops/apps/cluster-issuer.yaml; do
+  sed -i.bak -E "s#(repoURL: ).*/capstone-phoenix\.git#\1${REPO}#" "$f" && rm -f "$f.bak"
   echo "updated $f"
 done
-echo "Done. repoURL now: $REPO"
+echo "repoURL now: $REPO"

@@ -33,7 +33,7 @@ on host ports 80/443, and DNS points at the control-plane's Elastic IP.
                          v
               postgres-0  (StatefulSet + PVC on local-path)
 
-nodes: server (k3s server) + worker-1, worker-2 (k3s agents)
+nodes: control-plane (k3s server) + worker-1, worker-2 (k3s agents)
 platform (managed by Argo CD): argocd, ingress-nginx, cert-manager, sealed-secrets
 (metrics-server is built into k3s)
 ```

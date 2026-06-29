@@ -34,14 +34,21 @@ resource "aws_instance" "server" {
     encrypted   = true
   }
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required" # IMDSv2 only
+    http_put_response_hop_limit = 1
+  }
+
   tags = {
     Name = "${var.project_name}-server"
     Role = "k3s-server"
   }
 }
 
-# Stable public address for SSH + the ingress DNS A record. An EIP attached to a
-# running instance is free; it survives stop/start so DNS never goes stale.
+# Stable public address for SSH + the ingress DNS A record. The EIP survives
+# stop/start so DNS never goes stale. AWS bills ~$3.60/mo per public IPv4 since
+# Feb 2024 (see docs/COST.md).
 resource "aws_eip" "server" {
   instance = aws_instance.server.id
   domain   = "vpc"
@@ -49,6 +56,8 @@ resource "aws_eip" "server" {
 }
 
 # --- Workers (k3s agents) ---
+# Workers use auto-assigned public IPs (no EIP), which change on stop/start.
+# Re-run `terraform apply` (make infra) after a stop/start to refresh the inventory.
 resource "aws_instance" "worker" {
   count                       = var.worker_count
   ami                         = data.aws_ami.ubuntu.id
@@ -62,6 +71,12 @@ resource "aws_instance" "worker" {
     volume_size = var.root_volume_size
     volume_type = "gp3"
     encrypted   = true
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required" # IMDSv2 only
+    http_put_response_hop_limit = 1
   }
 
   tags = {

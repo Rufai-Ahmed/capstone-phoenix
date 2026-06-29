@@ -12,7 +12,7 @@ From a fresh clone to a live HTTPS multi-node GitOps cluster.
   ```bash
   ssh-keygen -t ed25519 -f ~/.ssh/capstone-phoenix -C capstone-phoenix
   ```
-- Fork this repo, then tell the GitOps layer about your fork:
+- If you forked this repo, point the GitOps layer at your fork:
   ```bash
   ./scripts/set-repo-url.sh https://github.com/<you>/capstone-phoenix.git
   git commit -am "point gitops at my fork" && git push
@@ -42,10 +42,11 @@ Point your domain at the server's Elastic IP (from `terraform output dns_target`
 taskapp.<you>.com.   A   <server-eip>
 ```
 
-Then set the domain in 3 spots (overlay) and the ACME email (issuer):
+The prod overlay and the cluster-issuer are already set to this project's domain
+(taskapp.rufaiahmed.com) and ACME email. If you forked this, change them to yours:
 
-- `manifests/overlays/prod/kustomization.yaml`: replace `taskapp.example.com` (3 places)
-- `platform/cluster-issuer.yaml`: replace `you@example.com` (2 places)
+- `manifests/overlays/prod/kustomization.yaml`: the two Ingress host patches and the CORS_ORIGINS value
+- `platform/cluster-issuer.yaml`: the `email:` in both ClusterIssuers
 
 ```bash
 git commit -am "set domain + acme email" && git push

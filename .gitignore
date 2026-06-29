@@ -24,6 +24,8 @@ infra/ansible/inventory/hosts.ini
 !*secret*.example.yaml
 # sealed secrets are encrypted, so they are safe to commit
 !*.sealed.yaml
+# this Argo Application only references the upstream helm chart, no secret material
+!gitops/apps/sealed-secrets.yaml
 *.pem
 *.key
 id_rsa*

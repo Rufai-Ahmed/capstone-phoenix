@@ -2,7 +2,7 @@
 # Connection vars (ansible_user, key, python) live in group_vars/all.yml.
 
 [server]
-server ansible_host=${server_public_ip}
+control-plane ansible_host=${server_public_ip}
 
 [agents]
 %{ for w in workers ~}

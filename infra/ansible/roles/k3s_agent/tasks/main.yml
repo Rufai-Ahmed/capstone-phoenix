@@ -7,15 +7,17 @@
 
 - name: Install k3s agent and join the cluster
   ansible.builtin.shell:
-    cmd: >
-      curl -sfL https://get.k3s.io |
-      INSTALL_K3S_VERSION="{{ k3s_version }}"
-      K3S_URL="https://{{ server_private_ip }}:6443"
-      K3S_TOKEN="{{ hostvars[groups['server'][0]]['k3s_token'] }}"
+    cmd: |
+      set -o pipefail
+      curl -sfL https://get.k3s.io | \
+      INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      K3S_URL="https://{{ server_private_ip }}:6443" \
+      K3S_TOKEN="{{ hostvars[groups['server'][0]]['k3s_token'] }}" \
+      K3S_NODE_NAME="{{ inventory_hostname }}" \
       sh -s - agent
   args:
     executable: /bin/bash
-  when: k3s_version not in k3s_installed.stdout
+  when: (k3s_installed.stdout.split() | select('match', '^v[0-9]') | first | default('')) != k3s_version
   changed_when: true
 
 - name: Wait for the k3s-agent service to be active

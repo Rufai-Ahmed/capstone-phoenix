@@ -1,0 +1,41 @@
+name: bump-image
+
+# Deploy half of the GitOps loop: bump a pinned image tag in the prod overlay so
+# Argo CD reconciles the new version (no kubectl). The build+push half lives in the
+# app source repos (taskapp_backend_cicd / taskapp_frontend_cicd); their CD calls
+# this with the new GHCR SHA.
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: which image to bump
+        type: choice
+        options: [backend, frontend]
+        required: true
+      tag:
+        description: new image tag (GHCR commit SHA)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize
+        run: |
+          curl -sfL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo mv kustomize /usr/local/bin/
+      - name: Bump the pinned tag
+        working-directory: manifests/overlays/prod
+        run: |
+          kustomize edit set image \
+            ghcr.io/ts-a-devops/taskapp-${{ inputs.component }}=ghcr.io/ts-a-devops/taskapp-${{ inputs.component }}:${{ inputs.tag }}
+      - name: Commit and push
+        run: |
+          git config user.name  "capstone-ci[bot]"
+          git config user.email "capstone-ci@users.noreply.github.com"
+          git commit -am "deploy(${{ inputs.component }}): ${{ inputs.tag }}" || { echo "no change"; exit 0; }
+          git push

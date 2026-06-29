@@ -2,7 +2,7 @@
 # from live node IPs and is gitignored. This shows the shape Ansible expects.
 
 [server]
-server ansible_host=51.20.0.10
+control-plane ansible_host=51.20.0.10
 
 [agents]
 capstone-phoenix-worker-1 ansible_host=51.20.0.21
