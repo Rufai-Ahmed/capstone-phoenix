@@ -1,0 +1,11 @@
+# GitOps: Argo CD owns the TaskApp, pulled from the fork (no manual kubectl in the final state)
+
+NAME      SYNC STATUS   HEALTH STATUS
+taskapp   Synced        Healthy
+
+detail:
+  sync:   Synced
+  health: Healthy
+  repo:   https://github.com/Rufai-Ahmed/capstone-phoenix.git
+  path:   manifests/overlays/prod
+  revision: c8c84891ad699d2950a13f9b13f944733c32ebab

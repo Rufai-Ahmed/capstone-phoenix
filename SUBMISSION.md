@@ -19,13 +19,20 @@ configured with Ansible, deployed with kustomize, and reconciled by Argo CD.
 - A complete Argo CD app-of-apps (sealed-secrets, cert-manager, ingress-nginx,
   cluster-issuer, taskapp) with documented sync waves.
 
-## What is not included, and why
+## Live evidence (captured on a local k3d cluster)
 
-The live cluster and its evidence (the get-nodes, TLS, HPA-scaling, and Argo-synced
-screenshots, plus the node-failover demo) are not here. The AWS account used is new and
-its EC2 vCPU quota is 1; the increase request was declined, the program did not provide
-credits, and no funded or free 3-node cluster was available, so standing up three real
-nodes was not possible. Nothing has been faked or staged.
+The AWS account's EC2 vCPU quota was capped at 1 and the increase was declined,
+with no funded or free cloud available, so the cluster could not run on real EC2
+nodes. To still demonstrate it working, I brought up a real 3-node k3s cluster
+locally with k3d (one server + two agents) and captured the logs in
+docs/EVIDENCE/: 3 nodes Ready, replicas spread across nodes, the app serving end
+to end (`/api/health` reports the database connected), the HPA scaling the backend
+2 -> 6 on CPU and back to 2 idle, a zero-downtime backend rollout (240/240 requests
+returned 200), Postgres data surviving a pod delete, node failover via drain, and
+Argo CD owning the app (Synced + Healthy). The nodes are containers rather than
+separate VMs, and the one thing not capturable locally is a real-domain Let's
+Encrypt cert, which needs a publicly reachable ingress for the HTTP-01 challenge.
+Nothing is faked or staged.
 
 ## Reproducing it
 

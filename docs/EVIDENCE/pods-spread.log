@@ -1,0 +1,13 @@
+# kubectl -n taskapp get pods -o wide  (replicas land on different nodes)
+
+NAME                       READY   STATUS              RESTARTS      AGE    IP          NODE                    NOMINATED NODE   READINESS GATES
+backend-5c9d994d65-bw7hg   1/1     Running             0             59s    10.42.1.7   k3d-capstone-agent-0    <none>           <none>
+backend-5c9d994d65-c6k4k   1/1     Running             1 (90s ago)   7m6s   10.42.1.4   k3d-capstone-agent-0    <none>           <none>
+backend-5c9d994d65-hkmvr   1/1     Running             0             59s    10.42.2.8   k3d-capstone-agent-1    <none>           <none>
+backend-5c9d994d65-m4fn7   0/1     ContainerCreating   0             57s    <none>      k3d-capstone-server-0   <none>           <none>
+backend-5c9d994d65-zc9kr   1/1     Running             0             7m6s   10.42.2.3   k3d-capstone-agent-1    <none>           <none>
+backend-5c9d994d65-zpfn5   0/1     ContainerCreating   0             59s    <none>      k3d-capstone-server-0   <none>           <none>
+frontend-c977f5c6c-gv85g   1/1     Running             0             7m6s   10.42.0.5   k3d-capstone-server-0   <none>           <none>
+frontend-c977f5c6c-xldl9   1/1     Running             0             7m6s   10.42.2.2   k3d-capstone-agent-1    <none>           <none>
+postgres-0                 1/1     Running             0             7m4s   10.42.2.7   k3d-capstone-agent-1    <none>           <none>
+taskapp-migrate-wlbxp      0/1     Completed           0             7m3s   10.42.2.4   k3d-capstone-agent-1    <none>           <none>

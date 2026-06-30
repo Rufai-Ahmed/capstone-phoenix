@@ -1,0 +1,23 @@
+# PVC persistence: data survives deleting postgres-0 (local-path PV reattaches)
+NOTICE:  relation "evidence" already exists, skipping
+CREATE TABLE
+INSERT 0 1
+## rows before delete:
+         note          
+-----------------------
+ survives-pod-restart
+ written-before-delete
+(2 rows)
+
+## delete the pod...
+pod "postgres-0" deleted
+Waiting for 1 pods to be ready...
+partitioned roll out complete: 1 new pods have been updated...
+pod/postgres-0 condition met
+## rows after the pod was recreated (same PVC):
+         note          
+-----------------------
+ survives-pod-restart
+ written-before-delete
+(2 rows)
+

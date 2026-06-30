@@ -1,0 +1,6 @@
+# kubectl get nodes -o wide  (2026-06-30T09:30:56Z)
+
+NAME                    STATUS   ROLES           AGE     VERSION        INTERNAL-IP   EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION     CONTAINER-RUNTIME
+k3d-capstone-agent-0    Ready    <none>          8m27s   v1.35.5+k3s1   172.18.0.5    <none>        K3s v1.35.5+k3s1   6.10.14-linuxkit   containerd://2.2.3-k3s1
+k3d-capstone-agent-1    Ready    <none>          8m27s   v1.35.5+k3s1   172.18.0.4    <none>        K3s v1.35.5+k3s1   6.10.14-linuxkit   containerd://2.2.3-k3s1
+k3d-capstone-server-0   Ready    control-plane   8m41s   v1.35.5+k3s1   172.18.0.3    <none>        K3s v1.35.5+k3s1   6.10.14-linuxkit   containerd://2.2.3-k3s1

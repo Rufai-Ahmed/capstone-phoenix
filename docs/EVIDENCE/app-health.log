@@ -1,0 +1,5 @@
+# proves the running app serves and the /api proxy reaches the DB-backed backend
+
+GET /healthz -> 200
+GET /api/health -> {"database":"connected","status":"healthy","timestamp":"2026-06-30T09:31:17.515290"}
+

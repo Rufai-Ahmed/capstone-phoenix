@@ -1,0 +1,41 @@
+# Node failover: drain a worker NOT hosting postgres; app keeps serving (PDB minAvailable 1)
+09:37:34 postgres is on k3d-capstone-agent-1; draining k3d-capstone-agent-0
+## before:
+backend-5897cd654f-77wfq   1/1     Running             0          91s     10.42.2.10   k3d-capstone-agent-1    <none>           <none>
+backend-5897cd654f-bxvdm   1/1     Running             0          62s     10.42.1.12   k3d-capstone-agent-0    <none>           <none>
+backend-5897cd654f-ftgsj   1/1     Running             0          2m      10.42.1.9    k3d-capstone-agent-0    <none>           <none>
+backend-5897cd654f-gxqhs   1/1     Running             0          74s     10.42.1.11   k3d-capstone-agent-0    <none>           <none>
+backend-5897cd654f-xdq58   1/1     Running             0          45s     10.42.0.11   k3d-capstone-server-0   <none>           <none>
+backend-5897cd654f-xzdws   1/1     Running             0          28s     10.42.0.12   k3d-capstone-server-0   <none>           <none>
+backend-5c9d994d65-hkmvr   1/1     Terminating         0          7m22s   10.42.2.8    k3d-capstone-agent-1    <none>           <none>
+frontend-c977f5c6c-gv85g   1/1     Running             0          13m     10.42.0.5    k3d-capstone-server-0   <none>           <none>
+frontend-c977f5c6c-xldl9   1/1     Running             0          13m     10.42.2.2    k3d-capstone-agent-1    <none>           <none>
+node/k3d-capstone-agent-0 cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-system/svclb-traefik-36b970e6-wxg6h
+evicting pod kube-system/helm-install-traefik-crd-j8n98
+evicting pod taskapp/backend-5897cd654f-bxvdm
+evicting pod taskapp/backend-5897cd654f-gxqhs
+evicting pod taskapp/backend-5897cd654f-ftgsj
+evicting pod kube-system/traefik-9bcdbbd9-mkqk8
+evicting pod kube-system/helm-install-traefik-zzzzz
+pod/helm-install-traefik-zzzzz evicted
+pod/helm-install-traefik-crd-j8n98 evicted
+pod/traefik-9bcdbbd9-mkqk8 evicted
+pod/backend-5897cd654f-ftgsj evicted
+pod/backend-5897cd654f-bxvdm evicted
+pod/backend-5897cd654f-gxqhs evicted
+node/k3d-capstone-agent-0 drained
+## after drain (pods rescheduled off k3d-capstone-agent-0):
+backend-5897cd654f-77wfq   1/1     Running       0          2m    10.42.2.10   k3d-capstone-agent-1    <none>           <none>
+backend-5897cd654f-kxn55   0/1     Terminating   0          23s   10.42.2.14   k3d-capstone-agent-1    <none>           <none>
+backend-5897cd654f-v265d   0/1     Terminating   0          25s   10.42.0.13   k3d-capstone-server-0   <none>           <none>
+backend-5897cd654f-xdq58   1/1     Running       0          74s   10.42.0.11   k3d-capstone-server-0   <none>           <none>
+backend-5897cd654f-xzdws   1/1     Running       0          57s   10.42.0.12   k3d-capstone-server-0   <none>           <none>
+backend-5897cd654f-zxcq4   1/1     Running       0          27s   10.42.2.12   k3d-capstone-agent-1    <none>           <none>
+frontend-c977f5c6c-gv85g   1/1     Running       0          13m   10.42.0.5    k3d-capstone-server-0   <none>           <none>
+frontend-c977f5c6c-xldl9   1/1     Running       0          13m   10.42.2.2    k3d-capstone-agent-1    <none>           <none>
+## app still serving during the drain:
+GET /api/health -> 200
+09:38:08 uncordon k3d-capstone-agent-0
+node/k3d-capstone-agent-0 uncordoned
+/private/tmp/claude-502/-Users-ahmed-Documents/18d99c4a-035d-45e0-a293-e3738c1ccacd/scratchpad/capture-evidence.sh: line 94: 24359 Terminated: 15          kubectl -n $NS port-forward svc/frontend 18081:80 > /tmp/pf_fo.log 2>&1

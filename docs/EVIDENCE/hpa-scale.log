@@ -1,0 +1,44 @@
+# HPA scaling evidence (backend; target 70% CPU; min 2, max 6)
+## at rest:
+backend   Deployment/backend   cpu: 1%/70%   2     6     2     17m
+
+## load: hey -c 120 for 120s against /api/health (through the real frontend->backend path)
+09:41:19 backend   Deployment/backend   cpu: 1%/70%   2     6     2     17m
+09:41:29 backend   Deployment/backend   cpu: 2%/70%   2     6     2     17m
+09:41:39 backend   Deployment/backend   cpu: 2%/70%   2     6     2     17m
+09:41:49 backend   Deployment/backend   cpu: 2%/70%   2     6     2     17m
+09:41:59 backend   Deployment/backend   cpu: 1%/70%   2     6     2     17m
+09:42:09 backend   Deployment/backend   cpu: 2%/70%   2     6     2     18m
+09:42:19 backend   Deployment/backend   cpu: 2%/70%   2     6     2     18m
+09:42:30 backend   Deployment/backend   cpu: 1%/70%   2     6     2     18m
+09:42:40 backend   Deployment/backend   cpu: 12%/70%   2     6     2     18m
+09:42:51 backend   Deployment/backend   cpu: 12%/70%   2     6     2     18m
+09:43:01 backend   Deployment/backend   cpu: 1%/70%   2     6     2     18m
+09:43:11 backend   Deployment/backend   cpu: 2%/70%   2     6     2     19m
+09:43:21 backend   Deployment/backend   cpu: 2%/70%   2     6     2     19m
+09:43:31 backend   Deployment/backend   cpu: 2%/70%   2     6     2     19m
+09:43:41 backend   Deployment/backend   cpu: 1%/70%   2     6     2     19m
+09:43:52 backend   Deployment/backend   cpu: 1%/70%   2     6     2     19m
+
+## hey throughput:
+/private/tmp/claude-502/-Users-ahmed-Documents/18d99c4a-035d-45e0-a293-e3738c1ccacd/scratchpad/redo-evidence.sh: line 43: 24590 Terminated: 15          kubectl -n $NS port-forward svc/frontend 18090:80 > /tmp/pf_hpa.log 2>&1
+
+## backend pods after load:
+NAME                       READY   STATUS    RESTARTS   AGE     IP           NODE                    NOMINATED NODE   READINESS GATES
+backend-5897cd654f-77wfq   1/1     Running   0          7m59s   10.42.2.10   k3d-capstone-agent-1    <none>           <none>
+backend-5897cd654f-xdq58   1/1     Running   0          7m13s   10.42.0.11   k3d-capstone-server-0   <none>           <none>
+
+## autoscaler's own scaling record (kubectl describe hpa, Events):
+Events:
+  Type     Reason                        Age                  From                       Message
+  ----     ------                        ----                 ----                       -------
+  Warning  FailedGetResourceMetric       19m (x2 over 19m)    horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: unable to fetch metrics from resource metrics API: the server is currently unable to handle the request (get pods.metrics.k8s.io)
+  Warning  FailedComputeMetricsReplicas  19m (x2 over 19m)    horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: unable to fetch metrics from resource metrics API: the server is currently unable to handle the request (get pods.metrics.k8s.io)
+  Warning  FailedGetResourceMetric       16m (x10 over 19m)   horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  16m (x10 over 19m)   horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedGetResourceMetric       14m (x9 over 16m)    horizontal-pod-autoscaler  failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Normal   SuccessfulRescale             8m43s                horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             8m28s (x2 over 13m)  horizontal-pod-autoscaler  New size: 6; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             6m10s (x2 over 11m)  horizontal-pod-autoscaler  New size: 4; reason: All metrics below target
+  Normal   SuccessfulRescale             5m24s                horizontal-pod-autoscaler  New size: 3; reason: All metrics below target
+  Normal   SuccessfulRescale             4m9s (x2 over 10m)   horizontal-pod-autoscaler  New size: 2; reason: All metrics below target
