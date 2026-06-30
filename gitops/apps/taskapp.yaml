@@ -32,3 +32,12 @@ spec:
       namespace: taskapp
       jsonPointers:
         - /spec/replicas
+    # StatefulSet volumeClaimTemplates is immutable and the live copy carries
+    # apiVersion/kind/status the manifest doesn't, so ignore it to avoid a
+    # permanent cosmetic OutOfSync.
+    - group: apps
+      kind: StatefulSet
+      name: postgres
+      namespace: taskapp
+      jsonPointers:
+        - /spec/volumeClaimTemplates
