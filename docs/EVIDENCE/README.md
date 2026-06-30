@@ -27,6 +27,11 @@ Captured here:
   reconciling `manifests/overlays/prod` from the fork (no manual apply in the
   final state).
 
+Screenshots (in `screenshots/`):
+
+- `app-running.png` - the TaskApp UI served by the cluster (via port-forward).
+- `argocd-synced.png` - the Argo CD UI showing the taskapp Application Synced + Healthy, sourced from the fork.
+
 Produced without a cluster:
 
 - `rendered-manifests.yaml` - full `kubectl kustomize manifests/overlays/prod`.
