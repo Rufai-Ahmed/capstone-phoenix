@@ -9,6 +9,10 @@ metadata:
 spec:
   serviceName: postgres
   replicas: 1
+  # keep the data PVC if the StatefulSet is deleted or scaled to 0
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       app: postgres
@@ -83,6 +87,7 @@ spec:
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: local-path
+        volumeMode: Filesystem
         resources:
           requests:
             storage: 5Gi
